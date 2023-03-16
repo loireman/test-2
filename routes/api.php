@@ -21,7 +21,7 @@ Route::get('/json', function() {
         'timeout' => 10,
         'verify'  => false,
     ]);
-    $site = 'https://ru.tradingeconomics.com/country-list/population';
+    $site = 'https://tradingeconomics.com/country-list/population';
     $response = $client->get($site);
     $content = $response->getBody()->getContents();
     $crawler = new Crawler($content);
@@ -31,21 +31,22 @@ Route::get('/json', function() {
         $response = $client->get($site . $link);
         $content = $response->getBody()->getContents();
         $crawler = new Crawler($content);
-        $name = $crawler->filter('ul#pagemenutabs li.active a')->text();
         $crawler = $crawler->filter('table.table-heatmap')->filterXPath('//tr[contains(@class, "datatable-row")]');
-        $data = [];
         foreach ($crawler as $domElement) {
             $string = trim($domElement->childNodes->item(1)->textContent);
             $date = $domElement->childNodes->item(7)->textContent;
             $date = date('Y-m-d', strtotime($date));
             $country = [
-                'count_last' => $domElement->childNodes->item(3)->textContent,
-                'count_before' => $domElement->childNodes->item(5)->textContent,
+                'key' => $string,
+                'value' => $domElement->childNodes->item(3)->textContent,
+                'last' => $domElement->childNodes->item(5)->textContent,
                 'date' => $date,
             ];
-            $data[$string] = $country;
+            $existing_keys = array_column($result, 'key');
+            if (!in_array($country['key'], $existing_keys)) {
+                array_push($result, $country);
+            }
         }
-        $result[$name] = $data;
     }
     return response()->json($result, 200);
 });
